@@ -42,6 +42,8 @@ int startOfInode;
 int startOfData;
 struct superblock SuperBlock;
 int dirPerBlock;
+struct dirent * rootDir;
+struct inode * dirInode;
 
 int get_avail_ino() {
 
@@ -270,26 +272,33 @@ int get_node_by_path(const char *path, uint16_t ino, struct inode *inode) {
 	// Note: You could either implement it in a iterative way or recursive way
 
 	//Asuming that root inode is passed. If not replace inode with rootInode
+	printf("we got here1\n");
 	bool found = false;
 	int sizeOfPath = sizeof(path)/sizeof(*path);
-	char next[sizeOfPath];
+	char * next = (char *)malloc(sizeof(char *)*sizeOfPath);
 	int counter = 1;
 	int j = 0;
 	struct inode * tempNode = inode;
 	bool match = false;
+	printf("we got here2\n");
 	while (!found){
+		printf("Iteration %d\n",counter);
 		j = 0;
+		
 		while(counter < sizeOfPath && path[counter]!='/'&& path[counter]!='0'){
 			next[j] = path[counter];
 			counter++;
 			j++;
 		}
+		printf("Passed loop 1");
 		counter++;
 		struct dirent * tempDir = 0;
 		for(int i = 0; i < dirPerBlock; i++){
+			printf("Entering For Loop 1");
 			tempDir = (struct dirent *)(&tempNode->direct_ptr[0] + (sizeof(struct dirent) * i));
 			if(tempDir != 0 && tempDir->len == j){
 				match = true;
+				printf("Entering For Loop 2");
 				for(int x = 0; x < j; x++){
 					if(next[x] != tempDir->name[x]){
 						match = false;
@@ -353,8 +362,15 @@ int tfs_mkfs() {
 	set_bitmap(inodeBitmap,0);
 	set_bitmap(inodeBitmap,1);
 	//IMPLEMENT: Root Directory config
+
 	set_bitmap(inodeBitmap,2);
-	struct inode * dirInode=0;
+	dirInode= (struct inode *)malloc(sizeof(struct inode));
+	dirInode->ino = 2;
+	rootDir->ino = 2;
+	rootDir->len = sizeof(diskfile_path)/sizeof(*diskfile_path);
+	for(int i = 0; i <rootDir->len; i++){
+		rootDir->name[i] = diskfile_path[i];
+	}
 	dirInode->ino = 2;
 	dirInode->valid = 1;
 	dirInode->size = 1;//CHANGE WHAT IS THIS?
@@ -402,7 +418,7 @@ static int tfs_getattr(const char *path, struct stat *stbuf) {
 
 	// Step 1: call get_node_by_path() to get inode from path
 	struct inode * tempNode = 0;
-	 uint16_t tempNum = 0;
+	uint16_t tempNum = 0;
 	get_node_by_path(path, tempNum, tempNode);
 	// Step 2: fill attribute of file into stbuf from inode
 
@@ -535,8 +551,9 @@ static int tfs_open(const char *path, struct fuse_file_info *fi) {
 	// Step 1: Call get_node_by_path() to get inode from path
 
 	// Step 2: If not find, return -1
-
-	return get_node_by_path(path);
+	int inoNum = 0;
+	struct inode * tempNode = 0;
+	return get_node_by_path(path, inoNum, tempNode);
 }
 
 static int tfs_read(const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *fi) {
