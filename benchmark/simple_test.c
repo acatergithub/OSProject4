@@ -32,21 +32,22 @@ int main(int argc, char **argv) {
 	}
 	printf("TEST 1: File create Success \n");
 
-
+	int check;
 	/* Perform sequential writes */
 	for (i = 0; i < ITERS; i++) {
 		//memset with some random data
 		memset(buf, 0x61 + i, BLOCKSIZE);
 
-		if (write(fd, buf, BLOCKSIZE) != BLOCKSIZE) {
+		if ((check = write(fd, buf, BLOCKSIZE)) != BLOCKSIZE) {
+			printf("Check was %d. Expected: %d",check, BLOCKSIZE);
 			printf("TEST 2: File write failure \n");
 			exit(1);
 		}
 	}
-	
 	fstat(fd, &st);
 	if (st.st_size != ITERS*BLOCKSIZE) {
 		printf("TEST 2: File write failure \n");
+		printf("Check was %lu. Expected: %d",st.st_size, ITERS*BLOCKSIZE);
 		exit(1);
 	}
 	printf("TEST 2: File write Success \n");
@@ -87,7 +88,6 @@ int main(int argc, char **argv) {
 	printf("TEST 4: File read Success \n");
 	close(fd);
 
-
 	/* Unlink the file */
 	if ((ret = unlink(TESTDIR "/file")) < 0) {
 		perror("unlink");
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 	printf("TEST 5: File unlink success \n");
-
+	return 0;
 
 	/* Directory creation test */
 	if ((ret = mkdir(TESTDIR "/files", DIRPERM)) < 0) {
